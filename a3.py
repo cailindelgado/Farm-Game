@@ -83,9 +83,11 @@ class FarmView(AbstractGrid):
 
         #plants
         # plants = (position : Plant)
-                # if plants.items()[row_idx, column_idx]:
-                #     pass
-
+                # for pos, plant in plants.items():
+                #     if pos == (row_idx, column_idx):
+                #       pass  
+                    
+        
 #NOTE make the next day button dynamic
 class InfoBar(AbstractGrid):
     def __init__(self, master: tk.Tk | tk.Frame) -> None:
@@ -104,7 +106,7 @@ class InfoBar(AbstractGrid):
         self.clear()
 
         # day 
-        self.annotate_position((0, 0), text= 'Day', font= HEADING_FONT)
+        self.annotate_position((0, 0), text= 'Day:', font= HEADING_FONT)
         self.annotate_position((1, 0), text= f"{day}", font= ('Helvetica', 15))
 
         # money 
@@ -134,6 +136,9 @@ class ItemView():
         (i.e. when developing, just pass None to begin with, and hook up the 
         functionality once you’ve completed the rest of the tasks; see Section 5).
         """
+        self._item_name = item_name
+        self._amount = amount
+
         self._select_command = select_command
         self._sell_command = sell_command 
         self._buy_command = buy_command
@@ -141,7 +146,6 @@ class ItemView():
         self.item_price = 0
         self.item_cost = 'N/A'
 
-        self._item_name = item_name
 
         #check if item with name exists within SELL_PRICES
         if SELL_PRICES.get(self._item_name) != None:    
@@ -164,19 +168,19 @@ class ItemView():
                                width= INVENTORY_WIDTH, 
                                bg= self.frame_colour, 
                                relief= 'ridge', border= 1)
-        item_frame = tk.Frame(self._inven_frame, bg= self.frame_colour)
-        button_frame = tk.Frame(self._inven_frame)
+        self._item_frame = tk.Frame(self._inven_frame, bg= self.frame_colour)
+        self._button_frame = tk.Frame(self._inven_frame)
         
         #item labels
-        self._item_info = tk.Label(item_frame, 
+        self._item_info = tk.Label(self._item_frame, 
                  text= f'{self._item_name}: {amount}', 
                  font= ('Helvetica', 12), 
                  bg= self.frame_colour).pack(anchor= 'n')
-        tk.Label(item_frame, 
+        self._sell_info = tk.Label(self._item_frame, 
                  text= f'Sell price: {self.item_price}',
                  font= ('Helvetica', 12), 
                  bg= self.frame_colour).pack(anchor= 'center')
-        tk.Label(item_frame, 
+        self._buy_info = tk.Label(self._item_frame, 
                  text= f'Buy price: {self.item_cost}', 
                  font= ('Helvetica', 12), 
                  bg= self.frame_colour).pack(anchor= 's')
@@ -186,20 +190,20 @@ class ItemView():
         #buy and sell buttons 
 
         if self._item_name[-4:] == 'Seed':
-            tk.Button(button_frame, 
+            tk.Button(self._button_frame, 
                     text= 'Buy', 
                     font= ('Helvetica', 12), 
                     bg= 'white', 
                     command= lambda: print('buy item')).pack(side= 'left')
         
-        tk.Button(button_frame, 
+        tk.Button(self._button_frame, 
                 text= 'Sell', 
                 font= ('Helvetica', 12), 
                 bg= 'white',
                 command= lambda: print('Sell item')).pack(side= 'left')
         
-        item_frame.pack(side= 'left')
-        button_frame.pack(side= 'right')
+        self._item_frame.pack(side= 'left')
+        self._button_frame.pack(side= 'right')
         self._inven_frame.pack(side= 'top', fill= 'x')
 
 
@@ -211,12 +215,9 @@ class ItemView():
         """
         if selected:
             self._inven_frame.config(bg= INVENTORY_SELECTED_COLOUR)
-            self._item_info.config(text= f'{selected}: {amount}')
-            """
-            SET inventory_frame colour to be INVENTORY_COLOUR_SELECTED
-
-            """
-        
+            self._item_frame.config(bg= INVENTORY_SELECTED_COLOUR)
+            
+        # self._item_info.config(text= f'{self._item_name}: {self._amount - amount}')
             
 
 #NOTE Controller class
@@ -252,7 +253,7 @@ class FarmGame():
 
         #next day btn
         next_day = tk.Button(master, 
-                             text= "Next Day", 
+                             text= "Next day", 
                              font= ('Helvetica', 12), 
                              command= self.btn_func)
         
@@ -265,7 +266,7 @@ class FarmGame():
         # Item view items in inventory
         for item, amount in self._character.get_inventory().items():
             self._items = ItemView(master, item, amount)
-            
+                                                                                            #NOTE is this ok? NOTE 
         # Itemview seed display
         for seed in SEEDS:
             if self._character.get_inventory().get(seed) == None:
@@ -306,16 +307,10 @@ class FarmGame():
         """
         #player_position
         player_pos = self._character.get_position()
-
-        #set movement variables
-        for direction, pos in MOVE_DELTAS.items():
-            if direction == event.char:
-                new_pos = player_pos[0] + pos[0], player_pos[1] + pos[1]
-                break 
         
         # print key pressed     NOTE for debugging NOTE
         # print(f'key = {event.char}, pos = {self._character.get_position()}, new_pos = {new_pos}')
-        print(event)
+        # print(event)
 
         if event.char == 'w':   #move up
             self._farm_model.move_player(UP)
@@ -336,18 +331,18 @@ class FarmGame():
             
         elif event.char == 'p':
             print('if item selected, attempt to plant at players position')
-            # self._farm_model.add_plant(position= player_pos, plant= ??)
-            # self.redraw()
+            self._farm_model.add_plant(position= player_pos, plant= PotatoPlant())      #NOTE change the plant NOTE
+            self.redraw()
 
         elif event.char == 'h': 
             print('Attempt to harvest plant from players current position')
-            # self._farm_model.harvest_plant(player_pos)
-            # self.redraw()
+            self._farm_model.harvest_plant(player_pos)
+            self.redraw()
 
         elif event.char == 'r':
             print('attempt to remove the plant from the players current position.')
-            # self._farm_model.remove_plant(player_pos)
-            # self.redraw()
+            self._farm_model.remove_plant(player_pos)
+            self.redraw()
 
         elif event.char == 't':
             """Attempt to till the soil from the player’s current position. If
@@ -366,14 +361,19 @@ class FarmGame():
 
         elif event.num == 1:
             self._character.select_item(self._items._item_name)
-            self._items.update()
-        
-
+            self.select_item(self._character._selected_item)
+            print('clicked button 1')
 
     def select_item(self, item_name: str) -> None:
         """This method should set the selected item to be item_name and 
         then redraw the view.
         """
+        self._character.select_item(item_name)
+
+        #NOTE figure out how to update the item views so that they backgound colour changes
+        self._items.update(0, True)
+
+
 
     def buy_item(self, item_name: str) -> None:
         """The callback to be given to each ItemView for buying items. 
