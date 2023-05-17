@@ -110,11 +110,11 @@ class InfoBar(AbstractGrid):
         self.annotate_position((1, 0), text= f"{day}", font= ('Helvetica', 15))
 
         # money 
-        self.annotate_position((0, 1), text= 'Money', font= HEADING_FONT)
+        self.annotate_position((0, 1), text= 'Money:', font= HEADING_FONT)
         self.annotate_position((1, 1), text= f'${money}', font= ('Helvetica', 15))
 
         # energy 
-        self.annotate_position((0, 2), text= 'Energy', font= HEADING_FONT)
+        self.annotate_position((0, 2), text= 'Energy:', font= HEADING_FONT)
         self.annotate_position((1, 2), text= f'{energy}', font= ('Helvetica', 15))
 
 #NOTE FIX THE LAYOUT, IS ANNOYING ASF
