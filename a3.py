@@ -86,8 +86,7 @@ class FarmView(AbstractGrid):
                 # for pos, plant in plants.items():
                 #     if pos == (row_idx, column_idx):
                 #       pass  
-                    
-        
+                          
 #NOTE make the next day button dynamic
 class InfoBar(AbstractGrid):
     def __init__(self, master: tk.Tk | tk.Frame) -> None:
@@ -118,7 +117,9 @@ class InfoBar(AbstractGrid):
         self.annotate_position((1, 2), text= f'{energy}', font= ('Helvetica', 15))
 
 #NOTE FIX THE LAYOUT, IS ANNOYING ASF
-class ItemView():
+class ItemView(tk.Frame):
+   
+
     def __init__(self, 
                  master: tk.Frame, 
                  item_name: str, 
@@ -145,8 +146,7 @@ class ItemView():
 
         self.item_price = 0
         self.item_cost = 'N/A'
-
-
+        
         #check if item with name exists within SELL_PRICES
         if SELL_PRICES.get(self._item_name) != None:    
             self.item_price = SELL_PRICES.get(self._item_name) 
@@ -162,50 +162,36 @@ class ItemView():
             self.frame_colour = INVENTORY_COLOUR
         else: 
             self.frame_colour = INVENTORY_EMPTY_COLOUR
-
-        #frames
-        self._inven_frame = tk.Frame(master, 
-                               width= INVENTORY_WIDTH, 
-                               bg= self.frame_colour, 
-                               relief= 'ridge', border= 1)
-        self._item_frame = tk.Frame(self._inven_frame, bg= self.frame_colour)
-        self._button_frame = tk.Frame(self._inven_frame)
         
-        #item labels
-        self._item_info = tk.Label(self._item_frame, 
-                 text= f'{self._item_name}: {amount}', 
-                 font= ('Helvetica', 12), 
-                 bg= self.frame_colour).pack(anchor= 'n')
-        self._sell_info = tk.Label(self._item_frame, 
-                 text= f'Sell price: {self.item_price}',
-                 font= ('Helvetica', 12), 
-                 bg= self.frame_colour).pack(anchor= 'center')
-        self._buy_info = tk.Label(self._item_frame, 
-                 text= f'Buy price: {self.item_cost}', 
-                 font= ('Helvetica', 12), 
-                 bg= self.frame_colour).pack(anchor= 's')
+        #frame to store label and buttons.
+        self._inventory_frame = tk.Frame(master, 
+                                   width= INVENTORY_WIDTH, 
+                                   bg= self.frame_colour,
+                                   relief= 'ridge',
+                                   border= 1)
+
+
+        self._item_info = tk.Label(self._inventory_frame, 
+                                   text= f"{self._item_name}: {amount}\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}",
+                                   bg= self.frame_colour,
+                                   ).pack(side= 'left')
 
         
-        #NOTE make it so that only the sell buttons appear
         #buy and sell buttons 
-
         if self._item_name[-4:] == 'Seed':
-            tk.Button(self._button_frame, 
+            tk.Button(self._inventory_frame, 
                     text= 'Buy', 
-                    font= ('Helvetica', 12), 
                     bg= 'white', 
-                    command= lambda: print('buy item')).pack(side= 'left')
-        
-        tk.Button(self._button_frame, 
-                text= 'Sell', 
-                font= ('Helvetica', 12), 
-                bg= 'white',
-                command= lambda: print('Sell item')).pack(side= 'left')
-        
-        self._item_frame.pack(side= 'left')
-        self._button_frame.pack(side= 'right')
-        self._inven_frame.pack(side= 'top', fill= 'x')
+                    command= lambda: print('buy item')).pack(side= 'left', padx= 10)
 
+        tk.Button(self._inventory_frame, 
+                text= 'Sell', 
+                bg= 'white',
+                command= lambda: print('Sell item')).pack(side= 'left', padx= 10)
+
+               
+
+        self._inventory_frame.pack(side= 'top', fill= 'x')
 
     def update(self, amount: int, selected: bool = False) -> None:
         """Updates the text on the label, and the colour of this ItemView 
@@ -263,14 +249,28 @@ class FarmGame():
         self._info_bar.pack(side= 'bottom')
         self._farm.pack(side= 'left')
 
-        # Item view items in inventory
-        for item, amount in self._character.get_inventory().items():
-            self._items = ItemView(master, item, amount)
-                                                                                            #NOTE is this ok? NOTE 
-        # Itemview seed display
-        for seed in SEEDS:
-            if self._character.get_inventory().get(seed) == None:
-                self._items = ItemView(master, seed, amount=0)
+        #Item views items in inventory
+        in_inven = [item for item in self._character.get_inventory().items()] # NOTE list[tuple(str, int)] 
+
+        """
+        player inventory can contain a list of items such that:
+        potato seed
+        potato
+        kale seed
+        kale 
+        berry seed 
+        berry 
+        """
+        for item in ITEMS:
+            in_inventory = 1
+            for item_owned in self._character.get_inventory().keys():
+                if item_owned == item:
+                    self._items = ItemView(master, item, self._character.get_inventory().get(item))
+                    in_inventory = 0
+                    break
+            if in_inventory:
+                in_inventory = 1
+                self._items = ItemView(master, item, amount= 0)
 
 
         # Redraw
@@ -278,7 +278,7 @@ class FarmGame():
 
         #bindings
         master.bind('<Key>', self.handle_keypress) #move character
-        self._items._inven_frame.bind('<Button-1>', self.handle_keypress) # select an item
+        # self._items._inven_frame.bind('<Button-1>', self.handle_keypress) # select an item
     
     def btn_func(self):
         """ progresses day by one day, and redraws the info bar
@@ -380,6 +380,7 @@ class FarmGame():
         given item name, at the price specified in BUY PRICES, 
         and then redraw the view
         """
+        # self._character.buy()
 
     def sell_item(self, item_name: str) -> None: 
         """The callback to be given to each ItemView for selling items. 
@@ -387,7 +388,7 @@ class FarmGame():
         the given item name, at the price specified in SELL PRICES, 
         and then redraw the view
         """
-
+        # self._character.sell()
 
 def play_game(root: tk.Tk, map_file: str) -> None:
     game = FarmGame(root, map_file)
