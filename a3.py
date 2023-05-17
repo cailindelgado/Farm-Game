@@ -318,7 +318,6 @@ class FarmGame():
 
         elif event.char == 'a': #move left
             self._farm_model.move_player(LEFT)
-            self._character.reduce_energy(1)
             self.redraw()
         
         elif event.char == 's': #move down
