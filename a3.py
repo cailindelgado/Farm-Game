@@ -9,7 +9,6 @@ from constants import *
 map_file = 'maps/map1.txt'          #NOTE make so that it takes the user input, that way the map file can be changed.
 TOTAL_WIDTH = FARM_WIDTH + INVENTORY_WIDTH
 TOTAL_LENGTH = BANNER_HEIGHT + FARM_WIDTH + INFO_BAR_HEIGHT + 35
-FARM_DIMENSIONS = (len(read_map(map_file)[0]), len(read_map(map_file)))      #NOTE map grid size
 FARM_SIZE = (FARM_WIDTH, FARM_WIDTH)                                         #NOTE farm size
 
 # Implement your classes here
@@ -41,7 +40,7 @@ class FarmView(AbstractGrid):
         self._facing_S_img = get_image('images/player_s.png', self._img_size, self.img_cache)
         self._facing_D_img = get_image('images/player_d.png', self._img_size, self.img_cache)
 
-        #plant images
+        #plant images                                                                                          NOTE make more pythonic NOTE
 
     def redraw(self, 
                ground: list[str], 
@@ -70,6 +69,13 @@ class FarmView(AbstractGrid):
                 elif marker == UNTILLED:
                     self.create_image(midpoint, image= self._U_img)
                 
+        #plants
+        # plants = (position : Plant)
+                for pos, plant in plants.items():
+                    if pos == (row_idx, column_idx):
+                        self.create_image(midpoint, image= get_image(f'images/{get_plant_image_name(plant)}', self._img_size, self.img_cache))  
+                                #NOTE make a function that inputs the plant and returns the filepath with images/
+
         #player
                 if player_position == (row_idx, column_idx):
                     if player_direction == UP:
@@ -81,12 +87,6 @@ class FarmView(AbstractGrid):
                     elif player_direction == RIGHT:
                         self.create_image(midpoint, image= self._facing_D_img)
 
-        #plants
-        # plants = (position : Plant)
-                # for pos, plant in plants.items():
-                #     if pos == (row_idx, column_idx):
-                #       pass  
-                          
 #NOTE make the next day button dynamic
 class InfoBar(AbstractGrid):
     def __init__(self, master: tk.Tk | tk.Frame) -> None:
@@ -119,6 +119,7 @@ class InfoBar(AbstractGrid):
 #NOTE FIX THE LAYOUT, IS ANNOYING ASF
 class ItemView(tk.Frame):
    
+    item_id = 0 
 
     def __init__(self, 
                  master: tk.Frame, 
@@ -146,6 +147,8 @@ class ItemView(tk.Frame):
 
         self.item_price = 0
         self.item_cost = 'N/A'
+
+        ItemView.item_id += 1
         
         #check if item with name exists within SELL_PRICES
         if SELL_PRICES.get(self._item_name) != None:    
@@ -175,21 +178,26 @@ class ItemView(tk.Frame):
                                    text= f"{self._item_name}: {amount}\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}",
                                    bg= self.frame_colour,
                                    ).pack(side= 'left')
-
         
+        #use 3 labels, store in a list to access each later on 
+        # store frames in a list to acces later on 
+        # write return methods for the frame and list indivudally 
+        
+
         #buy and sell buttons 
         if self._item_name[-4:] == 'Seed':
             tk.Button(self._inventory_frame, 
                     text= 'Buy', 
                     bg= 'white', 
-                    command= lambda: print('buy item')).pack(side= 'left', padx= 10)
+                    command= buy_command).pack(side= 'left', padx= 10)
 
         tk.Button(self._inventory_frame, 
                 text= 'Sell', 
                 bg= 'white',
-                command= lambda: print('Sell item')).pack(side= 'left', padx= 10)
-
+                command= sell_command).pack(side= 'left', padx= 10)
                
+        #bindings
+        master.bind('<Button-1>', select_command) # select an item
 
         self._inventory_frame.pack(side= 'top', fill= 'x')
 
@@ -200,22 +208,15 @@ class ItemView(tk.Frame):
         method. You must not destroy and recreate the internal widgets
         """
         if selected:
-            self._inven_frame.config(bg= INVENTORY_SELECTED_COLOUR)
-            self._item_frame.config(bg= INVENTORY_SELECTED_COLOUR)
+            self._inventory_frame.config(bg = INVENTORY_SELECTED_COLOUR)
+            self._item_info.config(bg = INVENTORY_SELECTED_COLOUR)
             
         # self._item_info.config(text= f'{self._item_name}: {self._amount - amount}')
             
-
 #NOTE Controller class
 class FarmGame():
-    """Is responsible for creating and maintaining instances of the model and 
-    view classes, event handling, and facilitating communication between the 
-    model and view classes. 
-    """
     def __init__(self, master: tk.Tk, map_file: str) -> None:
-        """includes the following steps:
-        - Create the instances of your view classes, and ensure they display in the same format as in figure 1
-        """
+        
         # master frame
         master.title('Farm Game')
         master.geometry(f'{TOTAL_WIDTH}x{TOTAL_LENGTH}')
@@ -225,14 +226,13 @@ class FarmGame():
         header_lbl = tk.Label(master, image= header_img)
         header_lbl.image = header_img
 
-
         #Infobar
         self._info_bar = InfoBar(master)
 
         #farm view
         self._farm_model = FarmModel(map_file)
         self._farm_map = self._farm_model.get_map()
-        self._farm = FarmView(master, FARM_DIMENSIONS, FARM_SIZE)
+        self._farm = FarmView(master, self._farm_model.get_dimensions(), FARM_SIZE)
 
         #player 
         self._character = self._farm_model.get_player()
@@ -252,25 +252,26 @@ class FarmGame():
         #Item views items in inventory
         in_inven = [item for item in self._character.get_inventory().items()] # NOTE list[tuple(str, int)] 
 
-        """
-        player inventory can contain a list of items such that:
-        potato seed
-        potato
-        kale seed
-        kale 
-        berry seed 
-        berry 
-        """
         for item in ITEMS:
             in_inventory = 1
             for item_owned in self._character.get_inventory().keys():
                 if item_owned == item:
-                    self._items = ItemView(master, item, self._character.get_inventory().get(item))
+                    self._items = ItemView(master, 
+                                           item, 
+                                           self._character.get_inventory().get(item), 
+                                           select_command= self.select_item,
+                                           buy_command= self.buy_item, 
+                                           sell_command= self.sell_item)
                     in_inventory = 0
                     break
             if in_inventory:
                 in_inventory = 1
-                self._items = ItemView(master, item, amount= 0)
+                self._items = ItemView(master, 
+                                       item, 
+                                       amount= 0, 
+                                       select_command= self.select_item, 
+                                       buy_command= self.buy_item, 
+                                       sell_command= self.sell_item)
 
 
         # Redraw
@@ -278,15 +279,11 @@ class FarmGame():
 
         #bindings
         master.bind('<Key>', self.handle_keypress) #move character
-        # self._items._inven_frame.bind('<Button-1>', self.handle_keypress) # select an item
     
     def btn_func(self):
-        """ progresses day by one day, and redraws the info bar
-        """
+        
         self._farm_model.new_day()
-        self._info_bar.redraw(day= self._farm_model.get_days_elapsed(), 
-                              money= self._character.get_money(), 
-                              energy= self._character.get_energy())
+        self.redraw()
 
     def redraw(self) -> None: 
         """Redraws the entire game based on the current model state
@@ -300,11 +297,6 @@ class FarmGame():
                               energy= self._character.get_energy())
 
     def handle_keypress(self, event: tk.Event) -> None:
-        """An event handler to be called when a keypress event occurs.
-        Should trigger the relevant behaviour, and cause the view to update to
-        reflect the changes. If a key is pressed that is not mapped to an event
-        it should be ignored
-        """
         #player_position
         player_pos = self._character.get_position()
         
@@ -330,13 +322,15 @@ class FarmGame():
             
         elif event.char == 'p':
             print('if item selected, attempt to plant at players position')
-            self._farm_model.add_plant(position= player_pos, plant= PotatoPlant())      #NOTE change the plant NOTE
+            self._farm_model.add_plant(position= player_pos, plant= BerryPlant())      #NOTE NOTE change the plant NOTE NOTE
             self.redraw()
 
         elif event.char == 'h': 
             print('Attempt to harvest plant from players current position')
             self._farm_model.harvest_plant(player_pos)
             self.redraw()
+            print(self._character.get_inventory())
+
 
         elif event.char == 'r':
             print('attempt to remove the plant from the players current position.')
@@ -344,32 +338,18 @@ class FarmGame():
             self.redraw()
 
         elif event.char == 't':
-            """Attempt to till the soil from the player’s current position. If
-            that position does not contain untilled soil, do nothing.
-            """
             self._farm_model.till_soil(player_pos)
             self.redraw()
 
         elif event.char == 'u':
-            """Attempt to untill the soil from the player’s current position.
-            If that position does not contain tilled soil, do nothing. If the
-            position contains a plant, do not untill the soil.
-            """
             self._farm_model.untill_soil(player_pos)
             self.redraw()
 
-        elif event.num == 1:
-            self._character.select_item(self._items._item_name)
-            self.select_item(self._character._selected_item)
-            print('clicked button 1')
-
     def select_item(self, item_name: str) -> None:
-        """This method should set the selected item to be item_name and 
-        then redraw the view.
-        """
         self._character.select_item(item_name)
+        # self.select_item(self._character.select_item(item_name)
 
-        #NOTE figure out how to update the item views so that they backgound colour changes
+        #NOTE figure out how to update the item views so that their backgound colour changes
         self._items.update(0, True)
 
 
@@ -380,7 +360,7 @@ class FarmGame():
         given item name, at the price specified in BUY PRICES, 
         and then redraw the view
         """
-        # self._character.buy()
+        # self._character.buy(item_name, price= ?)
 
     def sell_item(self, item_name: str) -> None: 
         """The callback to be given to each ItemView for selling items. 
@@ -388,7 +368,7 @@ class FarmGame():
         the given item name, at the price specified in SELL PRICES, 
         and then redraw the view
         """
-        # self._character.sell()
+        # self._character.sell(item_name, price= ?)
 
 def play_game(root: tk.Tk, map_file: str) -> None:
     game = FarmGame(root, map_file)
