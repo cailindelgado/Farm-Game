@@ -138,16 +138,13 @@ class ItemView(tk.Frame):
         (i.e. when developing, just pass None to begin with, and hook up the 
         functionality once you’ve completed the rest of the tasks; see Section 5).
         """
-        self._item_name = item_name
-        self._amount = amount
 
-        self._select_command = select_command
-        self._sell_command = sell_command 
-        self._buy_command = buy_command
+        self._item_name = item_name
 
         self.item_price = 0
         self.item_cost = 'N/A'
 
+        self.id = ItemView.item_id
         ItemView.item_id += 1
         
         #check if item with name exists within SELL_PRICES
@@ -161,24 +158,26 @@ class ItemView(tk.Frame):
         #set local global color variables
         self.outline = INVENTORY_OUTLINE_COLOUR
         self.selected = INVENTORY_SELECTED_COLOUR
+
         if amount != 0:
             self.frame_colour = INVENTORY_COLOUR
         else: 
             self.frame_colour = INVENTORY_EMPTY_COLOUR
-        
+
         #frame to store label and buttons.
-        self._inventory_frame = tk.Frame(master, 
-                                   width= INVENTORY_WIDTH, 
-                                   bg= self.frame_colour,
-                                   relief= 'ridge',
-                                   border= 1)
+        tk.Frame.__init__(self, 
+                          master, 
+                          width= INVENTORY_WIDTH, 
+                          bg= self.frame_colour, 
+                          relief= 'ridge', 
+                          border= 1)
 
-
-        self._item_info = tk.Label(self._inventory_frame, 
+        self._item_info = tk.Label(self, 
                                    text= f"{self._item_name}: {amount}\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}",
-                                   bg= self.frame_colour,
+                                   bg= self.frame_colour
                                    ).pack(side= 'left')
         
+        # NOTE tutors advice on editing the label and frame
         #use 3 labels, store in a list to access each later on 
         # store frames in a list to acces later on 
         # write return methods for the frame and list indivudally 
@@ -186,12 +185,12 @@ class ItemView(tk.Frame):
 
         #buy and sell buttons 
         if self._item_name[-4:] == 'Seed':
-            tk.Button(self._inventory_frame, 
+            tk.Button(self, 
                     text= 'Buy', 
                     bg= 'white', 
                     command= buy_command).pack(side= 'left', padx= 10)
 
-        tk.Button(self._inventory_frame, 
+        tk.Button(self, 
                 text= 'Sell', 
                 bg= 'white',
                 command= sell_command).pack(side= 'left', padx= 10)
@@ -199,7 +198,7 @@ class ItemView(tk.Frame):
         #bindings
         master.bind('<Button-1>', select_command) # select an item
 
-        self._inventory_frame.pack(side= 'top', fill= 'x')
+        self.pack(side= 'top', fill= 'x')
 
     def update(self, amount: int, selected: bool = False) -> None:
         """Updates the text on the label, and the colour of this ItemView 
@@ -208,8 +207,8 @@ class ItemView(tk.Frame):
         method. You must not destroy and recreate the internal widgets
         """
         if selected:
-            self._inventory_frame.config(bg = INVENTORY_SELECTED_COLOUR)
-            self._item_info.config(bg = INVENTORY_SELECTED_COLOUR)
+            self.config(bg = INVENTORY_SELECTED_COLOUR)
+            # self._item_info.config(bg = INVENTORY_SELECTED_COLOUR)
             
         # self._item_info.config(text= f'{self._item_name}: {self._amount - amount}')
             
@@ -249,30 +248,32 @@ class FarmGame():
         self._info_bar.pack(side= 'bottom')
         self._farm.pack(side= 'left')
 
-        #Item views items in inventory
-        in_inven = [item for item in self._character.get_inventory().items()] # NOTE list[tuple(str, int)] 
+        #list to append all items to so that can be accessed later
+        self.all_items = []
 
         for item in ITEMS:
             in_inventory = 1
             for item_owned in self._character.get_inventory().keys():
                 if item_owned == item:
-                    self._items = ItemView(master, 
-                                           item, 
-                                           self._character.get_inventory().get(item), 
-                                           select_command= self.select_item,
-                                           buy_command= self.buy_item, 
-                                           sell_command= self.sell_item)
+                    item = ItemView(master, 
+                            item, 
+                            self._character.get_inventory().get(item), 
+                            select_command= lambda event: self.select_item(event.widget._item_name),
+                            buy_command= lambda event: self.buy_item(event.widget._item_name), 
+                            sell_command= lambda event: self.sell_item(event.widget._item_name))
                     in_inventory = 0
+                    self.all_items.append(item)
                     break
             if in_inventory:
                 in_inventory = 1
-                self._items = ItemView(master, 
-                                       item, 
-                                       amount= 0, 
-                                       select_command= self.select_item, 
-                                       buy_command= self.buy_item, 
-                                       sell_command= self.sell_item)
-
+                item = ItemView(master, 
+                            item, 
+                            0, 
+                            select_command= lambda event: self.select_item(event.widget._item_name),
+                            buy_command= lambda event: self.buy_item(event.master.widget._item_name), 
+                            sell_command= lambda event: self.sell_item(event.master.widget._item_name))
+                self.all_items.append(item)
+            print(self.all_items)                                                                          #NOTE NOTE remove when finished NOTE NOTE
 
         # Redraw
         self.redraw()
@@ -321,9 +322,13 @@ class FarmGame():
             self.redraw()
             
         elif event.char == 'p':
-            print('if item selected, attempt to plant at players position')
-            self._farm_model.add_plant(position= player_pos, plant= BerryPlant())      #NOTE NOTE change the plant NOTE NOTE
-            self.redraw()
+            pos_x, pos_y = self._character.get_position()
+
+            if self._farm_model.get_map()[pos_x][pos_y] == SOIL:
+                self._farm_model.add_plant(position= player_pos, plant= PotatoPlant())      #NOTE NOTE change the plant NOTE NOTE
+                self.redraw()
+
+            #make so that you cannot plant on soil and grass ('G', 'S')
 
         elif event.char == 'h': 
             print('Attempt to harvest plant from players current position')
@@ -346,13 +351,12 @@ class FarmGame():
             self.redraw()
 
     def select_item(self, item_name: str) -> None:
-        self._character.select_item(item_name)
-        # self.select_item(self._character.select_item(item_name)
-
-        #NOTE figure out how to update the item views so that their backgound colour changes
-        self._items.update(0, True)
+        # self._character.select_item(item_name)
+        print(f'selected: {item_name}')
 
 
+        #NOTE figure out how to update the item views so that their backgound colour changes, also change the ItemView
+        # self.all_items[0].update(self, amount= 0, selected= True)
 
     def buy_item(self, item_name: str) -> None:
         """The callback to be given to each ItemView for buying items. 
@@ -360,7 +364,10 @@ class FarmGame():
         given item name, at the price specified in BUY PRICES, 
         and then redraw the view
         """
-        # self._character.buy(item_name, price= ?)
+        price = [item for item in BUY_PRICES if item[0] == item_name]
+        # self._character.buy(item_name, price= BUY_PRICES.get(item_name))
+        print(f'bought item: {item_name} for ${price}')
+
 
     def sell_item(self, item_name: str) -> None: 
         """The callback to be given to each ItemView for selling items. 
@@ -369,6 +376,7 @@ class FarmGame():
         and then redraw the view
         """
         # self._character.sell(item_name, price= ?)
+        print(f'sell item: {item_name}')
 
 def play_game(root: tk.Tk, map_file: str) -> None:
     game = FarmGame(root, map_file)
