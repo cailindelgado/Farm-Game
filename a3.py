@@ -40,7 +40,7 @@ class FarmView(AbstractGrid):
         self._facing_S_img = get_image('images/player_s.png', self._img_size, self.img_cache)
         self._facing_D_img = get_image('images/player_d.png', self._img_size, self.img_cache)
 
-        #plant images                                                                                       NOTE make more pythonic NOTE
+        #plant images     this is cool                                                                                  NOTE make more pythonic NOTE
 
     def redraw(self, 
                ground: list[str], 
