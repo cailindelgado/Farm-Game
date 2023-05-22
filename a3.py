@@ -192,8 +192,8 @@ class ItemView(tk.Frame):
         """
 
         if (amount == 0 or amount == None) and selected:
-            self.config(bg= INVENTORY_SELECTED_COLOUR)
-            self._item_info.config(bg= INVENTORY_SELECTED_COLOUR)
+            self.config(bg= INVENTORY_EMPTY_COLOUR)
+            self._item_info.config(bg= INVENTORY_EMPTY_COLOUR)
             self._item_info.config(text= f"{self._item_name}: 0\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
         
         elif (amount == 0 or amount == None) and not selected:
@@ -421,14 +421,14 @@ class FarmGame():
         if item_name == None:
             item_name = self._character.get_selected_item() 
     
-        for indx in range(6):
-            amount = self._character.get_inventory().get(ITEMS[indx])
+        for idx in range(6):
+            amount = self._character.get_inventory().get(ITEMS[idx])
 
-            if indx == self.get_position(item_name):
+            if idx == self.get_position(item_name):
                 self.all_items[self.get_position(item_name)].update(amount= amount, selected= True)
 
-            elif indx != self.get_position(item_name):
-                self.all_items[self.get_position(ITEMS[indx])].update(amount= amount, selected= False)
+            elif idx != self.get_position(item_name):
+                self.all_items[self.get_position(ITEMS[idx])].update(amount= amount, selected= False)
 
 def play_game(root: tk.Tk, map_file: str) -> None:
     game = FarmGame(root, map_file)
