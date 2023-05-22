@@ -40,7 +40,7 @@ class FarmView(AbstractGrid):
         self._facing_S_img = get_image('images/player_s.png', self._img_size, self.img_cache)
         self._facing_D_img = get_image('images/player_d.png', self._img_size, self.img_cache)
 
-        #plant images     this is cool                                                                                  NOTE make more pythonic NOTE
+        #plant images                                                                                       NOTE make more pythonic NOTE
 
     def redraw(self, 
                ground: list[str], 
@@ -150,7 +150,8 @@ class ItemView(tk.Frame):
         #frame to store label and buttons.
         tk.Frame.__init__(self, 
                           master, 
-                          width= INVENTORY_WIDTH, 
+                          width= INVENTORY_WIDTH,
+                          height= FARM_WIDTH / 6,
                           bg= self.frame_colour, 
                           relief= 'ridge', 
                           border= 1)
@@ -174,9 +175,10 @@ class ItemView(tk.Frame):
                 command= sell_command).pack(side= 'left', padx= 10)
                
         #bindings
-        master.bind('<Button-1>', select_command) # select an item
+        self.bind('<Button-1>', select_command) # select an item
+        self._item_info.bind('<Button-1>', select_command) # select an item
 
-        self.pack(side= 'top', fill= 'x')
+        self.pack(side= 'top', fill= 'both', expand= True)
 
     def update(self, amount: int, selected: bool = False) -> None:
         
@@ -187,6 +189,9 @@ class ItemView(tk.Frame):
         elif not selected:
             self.config(bg = INVENTORY_COLOUR)
             self._item_info.config(bg = INVENTORY_COLOUR)
+        elif selected == None:
+            self.config(bg= INVENTORY_EMPTY_COLOUR)
+            self._item_info.config(bg= INVENTORY_EMPTY_COLOUR)
         
         #set the amount if amount is passed in
         if amount != None:
@@ -234,22 +239,22 @@ class FarmGame():
         #create the 6 items 
         for item in ITEMS:
             if self._character.get_inventory().get(item) == None:
-                item = ItemView(master, 
+                item_view = ItemView(master, 
                         item, 
                         0, 
-                        select_command= lambda event: self.select_item(event.widget._item_name),
-                        buy_command= lambda event: self.buy_item(event.widget._item_name), 
-                        sell_command= lambda event: self.sell_item(event.widget._item_name))
+                        select_command= lambda _, item=item: self.select_item(item),
+                        buy_command= lambda _, item=item: self.buy_item(item), 
+                        sell_command= lambda _, item=item: self.sell_item(item))
 
             else:
-                item = ItemView(master, 
+                item_view = ItemView(master, 
                         item, 
                         self._character.get_inventory().get(item), 
-                        select_command= lambda event: self.select_item(event.widget._item_name),
-                        buy_command= lambda event: self.buy_item(event.widget._item_name), 
-                        sell_command= lambda event: self.sell_item(event.widget._item_name))
+                        select_command= lambda _, item=item: self.select_item(item),
+                        buy_command= lambda _, item=item: self.buy_item(item), 
+                        sell_command= lambda _, item=item: self.sell_item(item))
 
-            self.all_items.append(item)
+            self.all_items.append(item_view)
 
             # print(self.all_items)                                                                          #NOTE NOTE remove when finished NOTE NOTE
 
@@ -311,7 +316,7 @@ class FarmGame():
             
             if self._character.get_inventory().get(selected_item) <= 0:
                 return 
-              
+
             if self._farm_model.get_map()[pos_x][pos_y] != SOIL:
                 return
             
@@ -334,15 +339,15 @@ class FarmGame():
             self.redraw()
 
             #update itemview to display changes
-            self.all_items[self.get_position(item)].update(amount= self._character.get_inventory().get(item))             #NOTE NOTE change this is no wok NOTE NOTE
+            self.all_items[self.get_position(item)].update(amount= self._character.get_inventory().get(item), selected= True)             #NOTE NOTE change this is no wok NOTE NOTE
+            #create function which updates all item views at once
 
         elif event.char == 'h': 
-            print('Attempt to harvest plant from players current position')
             produce = self._farm_model.harvest_plant(player_pos)
             self._character.add_item(produce)
             self.redraw()
-            self.all_items[self.get_position(produce[0])]
-            print(self._character.get_inventory())
+            self.all_items[self.get_position(produce[0])].update(amount= self._character.get_inventory().get(produce[0]))
+            print(f'Attempt to harvest {produce[0]} from players current position')
 
         elif event.char == 'r':
             print('attempt to remove the plant from the players current position.')
@@ -418,4 +423,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-
