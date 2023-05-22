@@ -181,37 +181,36 @@ class ItemView(tk.Frame):
         self.pack(side= 'top', fill= 'both', expand= True)
 
     def update(self, amount: int, selected: bool = False) -> None:
-        
-        #set the colour if selected is passed in
-        # if selected and amount == None:
-        #     self.config(bg= INVENTORY_SELECTED_COLOUR)
-        #     self._item_info.config(bg= INVENTORY_SELECTED_COLOUR)
-        #     self._item_info.config(text= f"{self._item_name}: 0\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
 
-        # elif not selected and (amount == None or amount <= 0):
-        #     self.config(bg= INVENTORY_EMPTY_COLOUR)
-        #     self._item_info.config(bg= INVENTORY_EMPTY_COLOUR)
-        #     self._item_info.config(text= f"{self._item_name}: 0\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
+        """
+        if amount > 0 and selected: 
+            change the label amount to display amount
+            change colour to be selected
+        if emount <= 0 and not selected:
+            change the label amount to display 0
+            change colour to be unselected 
+        """
+
+        if (amount == 0 or amount == None) and selected:
+            self.config(bg= INVENTORY_SELECTED_COLOUR)
+            self._item_info.config(bg= INVENTORY_SELECTED_COLOUR)
+            self._item_info.config(text= f"{self._item_name}: 0\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
         
-        # elif selected and amount > 0:
-        #     self.config(bg= INVENTORY_SELECTED_COLOUR)
-        #     self._item_info.config(bg= INVENTORY_SELECTED_COLOUR)
-        #     self._item_info.config(text= f"{self._item_name}: {amount}\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
-        if selected and selected != None:
-            self.config(bg = INVENTORY_SELECTED_COLOUR)
-            self._item_info.config(bg = INVENTORY_SELECTED_COLOUR)
-        elif not selected and amount == None:
-            self.config(bg = INVENTORY_COLOUR)
-            self._item_info.config(bg = INVENTORY_COLOUR)
-        elif selected == None:
+        elif (amount == 0 or amount == None) and not selected:
             self.config(bg= INVENTORY_EMPTY_COLOUR)
             self._item_info.config(bg= INVENTORY_EMPTY_COLOUR)
-        
-        #set the amount if amount is passed in
-        if amount != None:
+            self._item_info.config(text= f"{self._item_name}: 0\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
+
+        elif amount > 0 and selected:
+            self.config(bg= INVENTORY_SELECTED_COLOUR)
+            self._item_info.config(bg= INVENTORY_SELECTED_COLOUR)
+            self._item_info.config(text= f"{self._item_name}: {amount}\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
+
+        elif amount > 0 and not selected:
+            self.config(bg= INVENTORY_COLOUR)
+            self._item_info.config(bg= INVENTORY_COLOUR)
             self._item_info.config(text= f"{self._item_name}: {amount}\nSell price: ${self.item_price}\nBuy price: ${self.item_cost}")
             
-#NOTE Controller class
 class FarmGame():
     def __init__(self, master: tk.Tk, map_file: str) -> None:
         
@@ -383,33 +382,29 @@ class FarmGame():
     def select_item(self, item_name: str) -> None:
         """selects the item to be used, and unselects other item"""
         self._character.select_item(item_name)
-        self.update_views()
+        self.update_views(item_name)                                                        #NOTE change this NOTE
         print(f'selected: {item_name}')
 
 
     def buy_item(self, item_name: str) -> None:
         """"""
-        #buy item
         self._character.buy(item_name, price= BUY_PRICES.get(item_name))
 
-        #update itemview for item to show increase in item
-        # self.update_views()
+        self.update_views(item_name)
+        #update the widget so that the amount in label changes
         self.redraw()
 
-        # self.all_items[self.get_position(item_name)].update(amount= self._character.get_inventory().get(item_name))             #NOTE NOTE change this is no wok NOTE NOTE
         print(f'bought item: {item_name} for ${BUY_PRICES.get(item_name)}')
 
 
     def sell_item(self, item_name: str) -> None: 
         """"""
-        #sell item
         self._character.sell(item_name, price= SELL_PRICES.get(item_name))
 
-        #update itemview for item to show increase in item
-        # self.update_views()
+        self.update_views(item_name)
+        #update the widget so that the label changes
         self.redraw()
 
-        # self.all_items[self.get_position(item_name)].update(amount= self._character.get_inventory().get(item_name))             #NOTE NOTE change this is no wok NOTE NOTE
         print(f'sell item: {item_name} for ${SELL_PRICES.get(item_name)}')
 
     def get_position(self, item_name: str) -> int:
@@ -420,22 +415,20 @@ class FarmGame():
             if item_name == item:
                 return ITEMS.index(item)
     
-    def update_views(self) -> bool:
+    def update_views(self, item_name: str) -> bool:
         """takes in the item name that is selected and appropriately changes
         the colour of the widget and the label contents"""
-        item = self._character.get_selected_item() 
-        amount = self._character.get_inventory().get(item)
+        if item_name == None:
+            item_name = self._character.get_selected_item() 
+    
+        for indx in range(6):
+            amount = self._character.get_inventory().get(ITEMS[indx])
 
-        for idx in range(6):
-            if idx != self.get_position(item) and amount > 0:
-                self.all_items[self.get_position(item)].update(amount= amount, selected= False)
+            if indx == self.get_position(item_name):
+                self.all_items[self.get_position(item_name)].update(amount= amount, selected= True)
 
-            elif idx != self.get_position(item) and (amount <= 0 or amount == None):
-                self.all_items[self.get_position(item)].update(amount= 0, selected= False)
-
-            else:
-                self.all_items[self.get_position(item)].update(amount= None, selected= True)
-        
+            elif indx != self.get_position(item_name):
+                self.all_items[self.get_position(ITEMS[indx])].update(amount= amount, selected= False)
 
 def play_game(root: tk.Tk, map_file: str) -> None:
     game = FarmGame(root, map_file)
